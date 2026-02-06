@@ -1,12 +1,12 @@
 # 🎵 Music Store Customer Support Bot
 
-A customer support bot for a music store (Chinook database) built with **LangGraph**, **LangChain**, and **LangSmith**. Demonstrates multi-agent orchestration, human-in-the-loop approval, and LLM-driven SQL — with a benchmark comparing both approaches.
+A customer support bot for a music store (Chinook database) built with **LangGraph**, **LangChain**, and **LangSmith**. Demonstrates multi-agent orchestration, human-in-the-loop approval, and LLM-driven SQL  - with a benchmark comparing both approaches.
 
 ## Repo Structure
 
 ```
 langgraph-agent-comparison/
-├── agent.ipynb          # ★ Main notebook — full LangGraph workflow with demo scenarios
+├── agent.ipynb          # ★ Main notebook  - full LangGraph workflow with demo scenarios
 ├── deep_agent.ipynb     # Alternative: Deep Agents + raw SQL (minimal code, LLM writes SQL)
 ├── benchmark.py         # Compares Workflow vs. Deep Agent on 6 queries (latency, tokens, cost)
 ├── agent/
@@ -35,7 +35,7 @@ A multi-node graph with explicit routing, specialized agents, and human-in-the-l
 
 ### 2. Deep Agents + Raw SQL (`deep_agent.ipynb`)
 
-A single agent with just 2 generic tools (`get_schema` + `run_query`). The LLM writes its own SQL — no routing, no pre-built queries. Maximum simplicity (~30 lines of agent code).
+A single agent with just 2 generic tools (`get_schema` + `run_query`). The LLM writes its own SQL  - no routing, no pre-built queries. Maximum simplicity (~30 lines of agent code).
 
 ### Benchmark Results (6 queries)
 

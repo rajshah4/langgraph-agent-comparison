@@ -4,16 +4,16 @@
 
 The existing notebook has several **intentional issues** that need to be addressed:
 
-1. **SQL injection vulnerabilities** — all queries use raw f-strings (`f"SELECT * FROM Customer WHERE CustomerID = {customer_id}"`)
-2. **Broken routing logic** — `_is_tool_call` uses `content_blocks` which isn't the correct LangChain API; should use `tool_calls`
-3. **No customer authentication** — anyone can look up any customer's data
-4. **No human-in-the-loop** — required by the spec
-5. **No LangSmith tracing** — required by the spec
-6. **No LangGraph Studio support** — no `langgraph.json`, no proper module structure
-7. **Flat, tangled graph** — every node has conditional edges to every other node; hard to reason about
+1. **SQL injection vulnerabilities**  - all queries use raw f-strings (`f"SELECT * FROM Customer WHERE CustomerID = {customer_id}"`)
+2. **Broken routing logic**  - `_is_tool_call` uses `content_blocks` which isn't the correct LangChain API; should use `tool_calls`
+3. **No customer authentication**  - anyone can look up any customer's data
+4. **No human-in-the-loop**  - required by the spec
+5. **No LangSmith tracing**  - required by the spec
+6. **No LangGraph Studio support**  - no `langgraph.json`, no proper module structure
+7. **Flat, tangled graph**  - every node has conditional edges to every other node; hard to reason about
 8. **Customer agent says "update profile" but has no update tool**
-9. **No checkpointer** passed to `compile()` — so no memory across turns
-10. **Deprecated APIs** — `set_conditional_entry_point`, `SqliteSaver` (should use `MemorySaver` or newer)
+9. **No checkpointer** passed to `compile()`  - so no memory across turns
+10. **Deprecated APIs**  - `set_conditional_entry_point`, `SqliteSaver` (should use `MemorySaver` or newer)
 
 ---
 
@@ -23,7 +23,7 @@ The existing notebook has several **intentional issues** that need to be address
 |------|-------------|-------|-------|
 | **🎵 Music Discovery** | Search songs, albums, artists; get genre-based recommendations | `search_catalog`, `get_recommendations_by_genre` | No |
 | **🧾 Order History** | View past purchases, invoices, spending summary | `get_purchase_history`, `get_invoice_details` | No |
-| **👤 Account Management** | View profile, update email/phone/address | `get_my_profile`, `update_my_profile` | **Yes** — updates require human approval |
+| **👤 Account Management** | View profile, update email/phone/address | `get_my_profile`, `update_my_profile` | **Yes**  - updates require human approval |
 
 This gives us **6 tools** across **3 areas**, hitting all the requirements:
 - ✅ At least 2 areas of work
@@ -84,7 +84,7 @@ This gives us **6 tools** across **3 areas**, hitting all the requirements:
 
 ```
 sql-support-bot/
-├── agent.ipynb            # ★ Primary build — everything lives here
+├── agent.ipynb            # ★ Primary build  - everything lives here
 ├── agent/
 │   ├── __init__.py        # Re-exports the compiled graph for Studio
 │   ├── graph.py           # Thin wrapper that builds the same graph for Studio
@@ -121,7 +121,7 @@ is a thin re-export layer so LangGraph Studio can point at `agent/graph.py:graph
 ## Customer Data Isolation Strategy
 
 - Customer ID is passed via LangGraph's **`config`** (i.e. `configurable: {"customer_id": 5}`)
-- Every tool that touches customer data reads `customer_id` from config — the user never gets to specify someone else's ID
+- Every tool that touches customer data reads `customer_id` from config  - the user never gets to specify someone else's ID
 - The Account agent's prompt tells it to never reveal other customers' data
 
 ---
@@ -134,7 +134,7 @@ When the Account Agent calls `update_my_profile`:
 3. If approved → execute the SQL update → confirm to user
 4. If rejected → tell user the update was denied
 
-This uses LangGraph's `interrupt()` function — clean, built-in, and very demo-friendly.
+This uses LangGraph's `interrupt()` function  - clean, built-in, and very demo-friendly.
 
 ---
 

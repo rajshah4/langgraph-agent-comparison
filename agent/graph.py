@@ -1,4 +1,4 @@
-"""Music Store Customer Support Bot — LangGraph graph definition.
+"""Music Store Customer Support Bot  - LangGraph graph definition.
 
 This is the Studio entry point. langgraph.json points here: agent/graph.py:graph
 """
@@ -37,9 +37,9 @@ You are a friendly front-desk assistant for a music store's customer support.
 Your job is to understand what the customer needs and route them to the right specialist.
 Use the routing tool to send the customer to:
 
-• "music" – for browsing the catalog, finding songs, albums, artists, or getting genre recommendations
-• "orders" – for questions about past purchases, invoices, or spending
-• "account" – for viewing or updating their profile (email, phone, address, etc.)
+• "music" - for browsing the catalog, finding songs, albums, artists, or getting genre recommendations
+• "orders" - for questions about past purchases, invoices, or spending
+• "account" - for viewing or updating their profile (email, phone, address, etc.)
 
 If the customer is just greeting you or making small talk, respond directly WITHOUT routing.
 If their request doesn't fit any category, politely explain what you can help with.
@@ -245,7 +245,7 @@ def guardrail_node(state: State):
     if "BLOCK" in response.content.upper():
         return {
             "messages": [AIMessage(content=(
-                "I'm sorry, I can only help with music store related questions — "
+                "I'm sorry, I can only help with music store related questions  - "
                 "like browsing our catalog, checking your orders, or managing your account. "
                 "How can I assist you today?"
             ))]

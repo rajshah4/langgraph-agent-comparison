@@ -43,7 +43,7 @@ from deepagents import create_deep_agent  # noqa: E402
 
 
 def get_schema() -> str:
-    """Get the database schema — table names and their columns.
+    """Get the database schema  - table names and their columns.
     Call this first to understand what data is available before writing queries."""
     return db.get_table_info()
 
@@ -73,8 +73,8 @@ You are a customer support assistant for a music store with a SQLite database (C
 The logged-in customer has CustomerId = {CUSTOMER_ID}.
 
 You have two custom tools:
-- get_schema — returns table names and columns. Call this FIRST.
-- run_query  — executes a SQL query.
+- get_schema  - returns table names and columns. Call this FIRST.
+- run_query   - executes a SQL query.
 
 Rules:
 - Always call get_schema before writing SQL if you haven't seen the schema yet.
@@ -92,7 +92,7 @@ deep_agent = create_deep_agent(
 )
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Test Queries — same 6 for both approaches
+# Test Queries  - same 6 for both approaches
 # ═════════════════════════════════════════════════════════════════════════════
 QUERIES = [
     "What AC/DC albums do you have?",
