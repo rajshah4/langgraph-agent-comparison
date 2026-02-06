@@ -1,14 +1,17 @@
 [project]
 name = "sql-support-bot"
 version = "0.1.0"
-description = "Add your description here"
+description = "Music store customer support bot built with LangGraph"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
-    "dotenv>=0.9.9",
+    "python-dotenv>=1.0.0",
     "ipykernel>=7.1.0",
-    "langchain-community>=0.4.1",
-    "langchain-openai>=1.1.0",
-    "langgraph>=1.0.4",
-    "langgraph-checkpoint-sqlite>=3.0.0",
+    "langchain>=0.3.14",
+    "langchain-community>=0.3.14",
+    "langchain-openai>=0.3.0",
+    "langgraph>=0.2.60",
+    "langgraph-checkpoint-sqlite>=2.0.0",
+    "langsmith>=0.2.10",
+    "requests>=2.32.0",
 ]
