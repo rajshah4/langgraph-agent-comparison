@@ -17,6 +17,33 @@ from pydantic import BaseModel, Field
 
 from agent.db import db
 
+
+def clean_messages_for_llm(messages):
+    """Filter out AIMessages with tool_calls that don't have corresponding ToolMessages.
+    
+    This prevents OpenAI errors when resuming from interrupts or handling stale state.
+    """
+    if not messages:
+        return messages
+    
+    # Check if last message is AIMessage with tool_calls
+    last_msg = messages[-1]
+    if isinstance(last_msg, AIMessage) and last_msg.tool_calls:
+        # Collect all tool call IDs from this message
+        tool_call_ids = {tc["id"] for tc in last_msg.tool_calls}
+        
+        # Check if we have ToolMessages for all of them
+        found_ids = set()
+        for msg in messages:
+            if isinstance(msg, ToolMessage) and msg.tool_call_id in tool_call_ids:
+                found_ids.add(msg.tool_call_id)
+        
+        # If not all tool calls have responses, remove the incomplete AIMessage
+        if found_ids != tool_call_ids:
+            return messages[:-1]
+    
+    return messages
+
 # ── LLM ───────────────────────────────────────────────────────────────────────
 
 model = ChatOpenAI(model="gpt-4o", temperature=0, streaming=True)
@@ -80,8 +107,8 @@ You have these tools:
 
 Guidelines:
 - NEVER reveal other customers' information.
-- Before requesting a profile update, confirm the exact change with the customer.
-- Let the customer know that updates require brief manager approval.
+- When a customer requests a profile update, IMMEDIATELY call the update_my_profile tool with the field and new value they specified.
+- Do NOT ask for confirmation - the tool will handle the approval process automatically.
 - Allowed update fields: Email, Phone, Address, City, State, Country, PostalCode, Company, FirstName, LastName
 - You can ONLY help with profile/account questions.
 """
@@ -162,7 +189,9 @@ music_tools = [search_catalog, get_recommendations_by_genre]
 @tool
 def get_purchase_history(state: Annotated[dict, InjectedState]) -> str:
     """Look up your recent purchases and invoices. No parameters needed."""
-    customer_id = state["customer_id"]
+    customer_id = state.get("customer_id", 0)
+    if customer_id == 0:
+        return "Error: customer_id not set. Please set customer_id in the initial state."
     result = db.run(
         f"SELECT InvoiceId, InvoiceDate, Total, BillingCity, BillingCountry "
         f"FROM Invoice WHERE CustomerId = {int(customer_id)} "
@@ -179,7 +208,9 @@ def get_invoice_details(invoice_id: int, state: Annotated[dict, InjectedState]) 
     Args:
         invoice_id: The invoice number to look up.
     """
-    customer_id = state["customer_id"]
+    customer_id = state.get("customer_id", 0)
+    if customer_id == 0:
+        return "Error: customer_id not set. Please set customer_id in the initial state."
     result = db.run(
         f"SELECT Track.Name AS Song, Artist.Name AS Artist, "
         f"InvoiceLine.UnitPrice, InvoiceLine.Quantity "
@@ -201,7 +232,9 @@ order_tools = [get_purchase_history, get_invoice_details]
 @tool
 def get_my_profile(state: Annotated[dict, InjectedState]) -> str:
     """View your current profile information (name, email, phone, address). No parameters needed."""
-    customer_id = state["customer_id"]
+    customer_id = state.get("customer_id", 0)
+    if customer_id == 0:
+        return "Error: customer_id not set. Please set customer_id in the initial state."
     result = db.run(
         f"SELECT FirstName, LastName, Email, Phone, Address, City, State, "
         f"Country, PostalCode, Company "
@@ -273,8 +306,9 @@ class RouteDecision(BaseModel):
 
 def router_node(state: State):
     """Classify intent and either route to a sub-agent or respond directly."""
+    cleaned_messages = clean_messages_for_llm(state["messages"])
     response = model.bind_tools([RouteDecision]).invoke(
-        [SystemMessage(content=ROUTER_PROMPT)] + state["messages"]
+        [SystemMessage(content=ROUTER_PROMPT)] + cleaned_messages
     )
     if response.tool_calls:
         dest = response.tool_calls[0]["args"]["destination"]
@@ -290,22 +324,25 @@ def route_after_router(state: State):
 
 
 def music_agent_node(state: State):
+    cleaned_messages = clean_messages_for_llm(state["messages"])
     response = model.bind_tools(music_tools).invoke(
-        [SystemMessage(content=MUSIC_AGENT_PROMPT)] + state["messages"]
+        [SystemMessage(content=MUSIC_AGENT_PROMPT)] + cleaned_messages
     )
     return {"messages": [response]}
 
 
 def orders_agent_node(state: State):
+    cleaned_messages = clean_messages_for_llm(state["messages"])
     response = model.bind_tools(order_tools).invoke(
-        [SystemMessage(content=ORDERS_AGENT_PROMPT)] + state["messages"]
+        [SystemMessage(content=ORDERS_AGENT_PROMPT)] + cleaned_messages
     )
     return {"messages": [response]}
 
 
 def account_agent_node(state: State):
+    cleaned_messages = clean_messages_for_llm(state["messages"])
     response = model.bind_tools(account_tools).invoke(
-        [SystemMessage(content=ACCOUNT_AGENT_PROMPT)] + state["messages"]
+        [SystemMessage(content=ACCOUNT_AGENT_PROMPT)] + cleaned_messages
     )
     return {"messages": [response]}
 
@@ -326,7 +363,16 @@ order_tools_node = ToolNode(order_tools)
 
 def account_tools_node(state: State):
     """Execute account tools. Profile updates require human approval via interrupt()."""
-    customer_id = state["customer_id"]
+    customer_id = state.get("customer_id", 0)
+    if customer_id == 0:
+        return {
+            "messages": [
+                ToolMessage(
+                    content="Error: customer_id not set. Please set customer_id in the initial state.",
+                    tool_call_id="error"
+                )
+            ]
+        }
     last_msg = state["messages"][-1]
     results = []
 
@@ -351,8 +397,8 @@ def account_tools_node(state: State):
                 result = f"Cannot update '{field}'. Allowed: {', '.join(sorted(allowed))}"
             else:
                 approval = interrupt(
-                    f"🔒 APPROVAL NEEDED: Customer {customer_id} wants to update "
-                    f"{field} → '{new_value}'. Type 'yes' to approve."
+                    f"APPROVAL NEEDED: Customer {customer_id} wants to update "
+                    f"{field} to '{new_value}'. Type 'yes' to approve."
                 )
 
                 if str(approval).lower().strip() in ("yes", "y", "approve"):
