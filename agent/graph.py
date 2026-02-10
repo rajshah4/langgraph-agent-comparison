@@ -444,4 +444,22 @@ workflow.add_edge("order_tools", "orders_agent")
 workflow.add_conditional_edges("account_agent", make_agent_router("account_tools"), ["account_tools", END])
 workflow.add_edge("account_tools", "account_agent")
 
+# ── Graph Compilation ───────────────────────────────────────────────────────────
+#
+# IMPORTANT: Checkpointer Requirements
+#
+# - LangGraph Studio: Provides checkpointing automatically (no checkpointer needed)
+# - Notebook execution: REQUIRES checkpointer for interrupt() and multi-turn conversations
+#   Example: graph = workflow.compile(checkpointer=MemorySaver())
+# - Production API: REQUIRES checkpointer (PostgresSaver or RedisSaver)
+#   Example: graph = workflow.compile(checkpointer=PostgresSaver.from_conn_string(...))
+#
+# Without a checkpointer:
+# - interrupt() will fail (HITL approval won't work)
+# - Multi-turn conversations won't persist
+# - State is lost between invocations
+#
+# This file is configured for Studio (no checkpointer). For other deployments,
+# you MUST add a checkpointer or interrupt() and state persistence will break.
+#
 graph = workflow.compile()
