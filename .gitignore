@@ -3,4 +3,6 @@ venv/
 .venv/
 __pycache__/
 .langgraph_api/
-PLAN.md
+# Ignore all markdown files except README.md
+*.md
+!README.md

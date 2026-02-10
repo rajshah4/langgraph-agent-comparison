@@ -13,6 +13,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, MessagesState, START, StateGraph
 from langgraph.prebuilt import InjectedState, ToolNode
 from langgraph.types import interrupt
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from agent.db import db
@@ -361,19 +362,27 @@ music_tools_node = ToolNode(music_tools)
 order_tools_node = ToolNode(order_tools)
 
 
-def account_tools_node(state: State):
+def account_tools_node(state: State, config: RunnableConfig | None = None):
     """Execute account tools. Profile updates require human approval via interrupt()."""
-    customer_id = state.get("customer_id", 0)
-    if customer_id == 0:
-        return {
-            "messages": [
-                ToolMessage(
-                    content="Error: customer_id not set. Please set customer_id in the initial state.",
-                    tool_call_id="error"
-                )
-            ]
-        }
     last_msg = state["messages"][-1]
+    if not isinstance(last_msg, AIMessage) or not last_msg.tool_calls:
+        return {}
+    
+    # Try to get customer_id from state first, then from config
+    customer_id = state.get("customer_id", 0)
+    if customer_id == 0 and config:
+        customer_id = config.get("configurable", {}).get("customer_id", 0)
+    
+    if customer_id == 0:
+        # Return error for each tool call with the correct tool_call_id
+        results = []
+        for tc in last_msg.tool_calls:
+            results.append(ToolMessage(
+                content="Error: customer_id not set. Please set customer_id in the initial state.",
+                tool_call_id=tc["id"]
+            ))
+        return {"messages": results}
+    
     results = []
 
     for tc in last_msg.tool_calls:
