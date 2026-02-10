@@ -230,19 +230,15 @@ def get_invoice_details(invoice_id: int, state: Annotated[dict, InjectedState]) 
 order_tools = [get_purchase_history, get_invoice_details]
 
 
+# NOTE: These tool definitions are ONLY for LLM tool discovery.
+# The actual execution happens in account_tools_node (custom node with HITL).
+# These functions are never actually called - they're just for the LLM to see what tools exist.
+
 @tool
 def get_my_profile(state: Annotated[dict, InjectedState]) -> str:
     """View your current profile information (name, email, phone, address). No parameters needed."""
-    customer_id = state.get("customer_id", 0)
-    if customer_id == 0:
-        return "Error: customer_id not set. Please set customer_id in the initial state."
-    result = db.run(
-        f"SELECT FirstName, LastName, Email, Phone, Address, City, State, "
-        f"Country, PostalCode, Company "
-        f"FROM Customer WHERE CustomerId = {int(customer_id)};",
-        include_columns=True,
-    )
-    return result if result else "Profile not found."
+    # This function is never executed - see account_tools_node for actual implementation
+    return ""
 
 
 @tool
@@ -253,13 +249,8 @@ def update_my_profile(field: str, new_value: str) -> str:
         field: The field to update (Email, Phone, Address, City, State, Country, PostalCode, Company, FirstName, LastName).
         new_value: The new value for the field.
     """
-    allowed = {
-        "Email", "Phone", "Address", "City", "State",
-        "Country", "PostalCode", "Company", "FirstName", "LastName",
-    }
-    if field not in allowed:
-        return f"Cannot update '{field}'. Allowed fields: {', '.join(sorted(allowed))}"
-    return f"PENDING_APPROVAL: Update {field} → '{new_value}'"
+    # This function is never executed - see account_tools_node for actual implementation
+    return ""
 
 
 account_tools = [get_my_profile, update_my_profile]
