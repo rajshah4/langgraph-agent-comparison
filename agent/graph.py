@@ -12,6 +12,7 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, MessagesState, START, StateGraph
 from langgraph.prebuilt import InjectedState, ToolNode
+from langgraph.errors import GraphInterrupt
 from langgraph.types import interrupt
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
@@ -377,41 +378,63 @@ def account_tools_node(state: State, config: RunnableConfig | None = None):
     results = []
 
     for tc in last_msg.tool_calls:
-        if tc["name"] == "get_my_profile":
-            result = db.run(
-                f"SELECT FirstName, LastName, Email, Phone, Address, City, State, "
-                f"Country, PostalCode, Company "
-                f"FROM Customer WHERE CustomerId = {int(customer_id)};",
-                include_columns=True,
-            ) or "Profile not found."
+        try:
+            if tc["name"] == "get_my_profile":
+                try:
+                    result = db.run(
+                        f"SELECT FirstName, LastName, Email, Phone, Address, City, State, "
+                        f"Country, PostalCode, Company "
+                        f"FROM Customer WHERE CustomerId = {int(customer_id)};",
+                        include_columns=True,
+                    ) or "Profile not found."
+                except Exception as e:
+                    result = f"Error retrieving profile: {str(e)}"
 
-        elif tc["name"] == "update_my_profile":
-            field = tc["args"]["field"]
-            new_value = tc["args"]["new_value"]
-
-            allowed = {
-                "Email", "Phone", "Address", "City", "State",
-                "Country", "PostalCode", "Company", "FirstName", "LastName",
-            }
-            if field not in allowed:
-                result = f"Cannot update '{field}'. Allowed: {', '.join(sorted(allowed))}"
-            else:
-                approval = interrupt(
-                    f"APPROVAL NEEDED: Customer {customer_id} wants to update "
-                    f"{field} to '{new_value}'. Type 'yes' to approve."
-                )
-
-                if str(approval).lower().strip() in ("yes", "y", "approve"):
-                    safe_value = new_value.replace("'", "''")
-                    db.run(
-                        f'UPDATE Customer SET "{field}" = \'{safe_value}\' '
-                        f"WHERE CustomerId = {int(customer_id)};"
-                    )
-                    result = f"✅ Updated {field} to '{new_value}' successfully."
+            elif tc["name"] == "update_my_profile":
+                # Validate input before interrupt
+                if "field" not in tc.get("args", {}):
+                    result = "Error: 'field' parameter is required."
+                elif "new_value" not in tc.get("args", {}):
+                    result = "Error: 'new_value' parameter is required."
                 else:
-                    result = "❌ Profile update was not approved by the manager."
-        else:
-            result = f"Unknown tool: {tc['name']}"
+                    field = tc["args"]["field"]
+                    new_value = tc["args"]["new_value"]
+
+                    allowed = {
+                        "Email", "Phone", "Address", "City", "State",
+                        "Country", "PostalCode", "Company", "FirstName", "LastName",
+                    }
+                    if field not in allowed:
+                        result = f"Cannot update '{field}'. Allowed: {', '.join(sorted(allowed))}"
+                    else:
+                        # Interrupt for approval - LangGraph handles interrupts natively
+                        # Do NOT wrap interrupt() in try/except - it's a first-class feature
+                        approval = interrupt(
+                            f"APPROVAL NEEDED: Customer {customer_id} wants to update "
+                            f"{field} to '{new_value}'. Type 'yes' to approve."
+                        )
+
+                        # After interrupt returns, execute the update
+                        if str(approval).lower().strip() in ("yes", "y", "approve"):
+                            try:
+                                safe_value = new_value.replace("'", "''")
+                                db.run(
+                                    f'UPDATE Customer SET "{field}" = \'{safe_value}\' '
+                                    f"WHERE CustomerId = {int(customer_id)};"
+                                )
+                                result = f"Updated {field} to '{new_value}' successfully."
+                            except Exception as e:
+                                # Database error after approval
+                                result = f"Error updating profile: {str(e)}. Approval was granted but update failed."
+                        else:
+                            result = "Profile update was not approved by the manager."
+            else:
+                result = f"Unknown tool: {tc['name']}"
+        except GraphInterrupt:
+            raise  # Let LangGraph handle interrupt flow - don't swallow it
+        except Exception as e:
+            # Catch-all for any unexpected errors
+            result = f"Error executing tool '{tc.get('name', 'unknown')}': {str(e)}"
 
         results.append(ToolMessage(content=str(result), tool_call_id=tc["id"]))
 
