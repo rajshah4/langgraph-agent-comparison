@@ -5,6 +5,9 @@ This is the Studio entry point. langgraph.json points here: agent/graph.py:graph
 
 from __future__ import annotations
 
+from lmnr import Laminar
+Laminar.initialize()
+
 from typing import Annotated, Literal
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage

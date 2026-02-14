@@ -17,8 +17,12 @@ import time
 import uuid
 
 from dotenv import load_dotenv
+from lmnr import Laminar
 
 load_dotenv()
+
+# Initialize Laminar tracing (auto-instruments LangChain/LangGraph)
+Laminar.initialize()
 
 # ── LangSmith Config ─────────────────────────────────────────────────────────
 os.environ["LANGSMITH_TRACING"] = "true"

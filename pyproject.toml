@@ -14,4 +14,7 @@ dependencies = [
     "langgraph-checkpoint-sqlite>=2.0.0",
     "langsmith>=0.2.10",
     "requests>=2.32.0",
+    "lmnr[all]",
+    "openhands-sdk",
+    "openhands-tools",
 ]
