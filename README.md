@@ -91,6 +91,14 @@ agent = Agent(llm=llm, tools=[tool_spec(get_schema), tool_spec(update_profile)])
 
 ## Benchmark Results
 
+### LangGraph: Workflow vs Deep Agent
+
+| Metric | Workflow (Structured) | Deep Agent (Raw SQL) |
+|---|---|---|
+| **Latency** | 27.2s | 38.6s (1.4x slower) |
+| **Tokens** | 6,457 | 114,519 (17.7x more) |
+| **Cost** | $0.022 | $0.209 (9.4x more) |
+
 ### OpenHands SDK: Structured vs Deep Agent
 
 | Metric | Structured (6 tools) | Deep Agent (Raw SQL) |
